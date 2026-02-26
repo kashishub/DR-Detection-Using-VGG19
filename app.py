@@ -5,29 +5,31 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 
-# ---------------------------------
-# Disable Gradio analytics (important for servers)
-# ---------------------------------
 os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
-# ---------------------------------
-# Download model if not exists
-# ---------------------------------
 MODEL_PATH = "model.h5"
+MODEL = None  # global lazy model
 
-if not os.path.exists(MODEL_PATH):
-    url = "https://drive.google.com/uc?id=1-1ZyhBrGSCaTSTEW561QWRWwHdo8LqAy"
-    gdown.download(url, MODEL_PATH, quiet=False)
+# -----------------------------
+# Lazy model loader
+# -----------------------------
+def load_model():
+    global MODEL
+    if MODEL is None:
+        if not os.path.exists(MODEL_PATH):
+            url = "https://drive.google.com/uc?id=1-1ZyhBrGSCaTSTEW561QWRWwHdo8LqAy"
+            gdown.download(url, MODEL_PATH, quiet=False)
+        MODEL = tf.keras.models.load_model(MODEL_PATH, compile=False)
+    return MODEL
 
-# ---------------------------------
-# Load model
-# ---------------------------------
-model = tf.keras.models.load_model(MODEL_PATH, compile=False)
 
-IMG_SIZE = (224, 224)
-
+# -----------------------------
+# Prediction
+# -----------------------------
 def predict(image):
-    image = image.resize(IMG_SIZE)
+    model = load_model()
+
+    image = image.resize((224, 224))
     image = np.array(image) / 255.0
     image = np.expand_dims(image, axis=0)
 
@@ -43,6 +45,9 @@ def predict(image):
     return f"{label} (Confidence: {confidence:.4f})"
 
 
+# -----------------------------
+# Interface
+# -----------------------------
 interface = gr.Interface(
     fn=predict,
     inputs=gr.Image(type="pil"),
@@ -51,9 +56,9 @@ interface = gr.Interface(
     description="Upload a retinal fundus image to detect DR."
 )
 
-# ---------------------------------
-# Render Port Binding (critical)
-# ---------------------------------
+# -----------------------------
+# Render port binding
+# -----------------------------
 port = int(os.environ.get("PORT", 7860))
 
 interface.launch(
