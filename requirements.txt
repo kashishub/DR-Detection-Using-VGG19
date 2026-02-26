@@ -1,4 +1,6 @@
-gradio
-tensorflow
+tensorflow==2.19.0
+gradio==4.44.1
+pillow
 numpy
-opencv-python
+gunicorn
+gdown

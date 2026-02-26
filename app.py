@@ -1,35 +1,57 @@
+import os
+import gdown
 import gradio as gr
-import tensorflow as tf
 import numpy as np
-import cv2
+import tensorflow as tf
+from PIL import Image
 
-# Load trained model
-model = tf.keras.models.load_model("dr_model.h5")
+# ------------------------------
+# Download model from Google Drive (only if not exists)
+# ------------------------------
 
-def preprocess_image(image):
-    image = cv2.resize(image, (224, 224))
-    image = image / 255.0
-    image = np.expand_dims(image, axis=0)
-    return image
+MODEL_PATH = "model.h5"
+
+if not os.path.exists(MODEL_PATH):
+    url = "https://drive.google.com/uc?id=1-1ZyhBrGSCaTSTEW561QWRWwHdo8LqAy"
+    gdown.download(url, MODEL_PATH, quiet=False)
+
+# ------------------------------
+# Load Model
+# ------------------------------
+
+model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+
+IMG_SIZE = (224, 224)
 
 def predict(image):
-    processed = preprocess_image(image)
-    prediction = model.predict(processed)[0][0]
+    image = image.resize(IMG_SIZE)
+    image = np.array(image) / 255.0
+    image = np.expand_dims(image, axis=0)
+
+    prediction = model.predict(image)[0][0]
 
     if prediction > 0.5:
-        result = f"Diabetic Retinopathy Detected (Confidence: {prediction:.2f})"
+        label = "Diabetic Retinopathy Detected"
+        confidence = float(prediction)
     else:
-        result = f"No Diabetic Retinopathy (Confidence: {1 - prediction:.2f})"
+        label = "No Diabetic Retinopathy"
+        confidence = float(1 - prediction)
 
-    return result
+    return f"{label} (Confidence: {confidence:.4f})"
+
 
 interface = gr.Interface(
     fn=predict,
-    inputs=gr.Image(type="numpy"),
+    inputs=gr.Image(type="pil"),
     outputs="text",
-    title="Diabetic Retinopathy Detection System",
-    description="Upload a retinal fundus image to detect Diabetic Retinopathy."
+    title="Diabetic Retinopathy Detection (VGG19)",
+    description="Upload a retinal fundus image to detect DR."
 )
 
-if __name__ == "__main__":
-    interface.launch()
+# ------------------------------
+# Render Port Binding
+# ------------------------------
+
+port = int(os.environ.get("PORT", 7860))
+
+interface.launch(server_name="0.0.0.0", server_port=port)
