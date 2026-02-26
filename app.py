@@ -5,20 +5,23 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 
-# ------------------------------
-# Download model from Google Drive (only if not exists)
-# ------------------------------
+# ---------------------------------
+# Disable Gradio analytics (important for servers)
+# ---------------------------------
+os.environ["GRADIO_ANALYTICS_ENABLED"] = "False"
 
+# ---------------------------------
+# Download model if not exists
+# ---------------------------------
 MODEL_PATH = "model.h5"
 
 if not os.path.exists(MODEL_PATH):
     url = "https://drive.google.com/uc?id=1-1ZyhBrGSCaTSTEW561QWRWwHdo8LqAy"
     gdown.download(url, MODEL_PATH, quiet=False)
 
-# ------------------------------
-# Load Model
-# ------------------------------
-
+# ---------------------------------
+# Load model
+# ---------------------------------
 model = tf.keras.models.load_model(MODEL_PATH, compile=False)
 
 IMG_SIZE = (224, 224)
@@ -48,10 +51,13 @@ interface = gr.Interface(
     description="Upload a retinal fundus image to detect DR."
 )
 
-# ------------------------------
-# Render Port Binding
-# ------------------------------
-
+# ---------------------------------
+# Render Port Binding (critical)
+# ---------------------------------
 port = int(os.environ.get("PORT", 7860))
 
-interface.launch(server_name="0.0.0.0", server_port=port)
+interface.launch(
+    server_name="0.0.0.0",
+    server_port=port,
+    share=False
+)
